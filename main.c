@@ -25,7 +25,14 @@ int get_listening_socket(int port, mm_err *err) {
 		return -1;
 	}
 
-	int rc = bind(fd, (struct sockaddr *) &addr, sizeof(addr));
+	int rc = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (int[1]){1}, sizeof(int));
+	if (rc < 0) {
+		*err = strerror(errno);
+		close(fd);
+		return -1;
+	}
+
+	rc = bind(fd, (struct sockaddr *) &addr, sizeof(addr));
 	if (rc < 0) {
 		*err = strerror(errno);
 		close(fd);
@@ -184,7 +191,7 @@ void acc_cb(evutil_socket_t fd, short what, void *arg) {
 		return;
 	}
 
-	map_insert(g->fd_to_state, &fd, 0, &state, 0);
+	map_insert(g->fd_to_state, &con_fd, 0, &state, 0);
 
 	struct event *echo_ev = event_new(g->eb, con_fd, EV_READ | EV_PERSIST, echo_cb, g);
 	event_add(echo_ev, NULL);
